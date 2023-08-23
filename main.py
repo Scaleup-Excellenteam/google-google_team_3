@@ -1,6 +1,9 @@
 import pandas as pd
 import os
 
+DATA_DIR = "/Archive1"
+CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+
 
 class TrieNode:
 
@@ -34,11 +37,23 @@ class Trie:
 
             if x == len(word) - 1:
                 if self.root.sentences_id.get(sentence_id) is None:
-                    self.root.sentences_id[sentence_id] = place_in_sentence
+                    self.root.sentences_id[sentence_id] = [place_in_sentence]
+                else:
+                    self.root.sentences_id[sentence_id].append(place_in_sentence)
+
+    def get_sentences_of_word(self, word):
+        node = self.root
+
+        for char in word:
+            if char not in node.children:
+                return None
+
+            else:
+                node = node.children[char]
+
+        return node.sentences_id
 
 
-DATA_DIR = "/Archive"
-CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 sentences_df = pd.DataFrame(columns=['ID', 'sentence', 'file_path'])
 words_trie = Trie()
 
@@ -48,14 +63,10 @@ def initialize_sentences_dataframe(line: str):
     return 1
 
 
-
 def initialize_words_trie(line: str, sentence_id: int):
     words = line.split()
     for x in range(len(words)):
         words_trie.insert(words[x], sentence_id, x)
-    for word in words:
-        words_trie.insert(word, sentence_id)
-
 
 
 def initialize_data():
@@ -71,8 +82,50 @@ def initialize_data():
                         initialize_words_trie(line, sentence_id)
 
 
+def run():
+    """
+        get the sentences that the word is in
+
+    """
+    user_input = input("The system is ready, enter your text: \n")
+    match_sentences = {}
+    words = user_input.split()
+
+    if len(words) > 2:
+
+        for x in range(len(words)):
+            # sentences_that_word_appears is a
+            sentences_that_word_appears = words_trie.get_sentences_of_word(words[x])
+            if sentences_that_word_appears:
+                if x == 0:
+                    for k in sentences_that_word_appears.keys():
+                        match_sentences[k] = 1
+
+                elif x == 1:
+                    for k, v in sentences_that_word_appears.items():
+                        if match_sentences.get(k) is None:
+                            match_sentences[k] = 1
+
+                        else:
+                            match_sentences[k] += 1
+
+                else:
+                    for k, v in sentences_that_word_appears.items():
+                        if (match_sentences.get(k) is None) or (match_sentences.get(k) < x - 1):
+                            match_sentences[k] = None
+                        else:
+                            match_sentences[k] += 1
+
+        return [key for key, value in match_sentences.items() if value >= len(words) - 1]
+
+    else:
+        return []
+
+
 def main():
+    print("Loading files and preparing system")
     initialize_data()
+    run()
 
 
 if __name__ == "__main__":
