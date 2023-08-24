@@ -1,8 +1,11 @@
 from dataclasses import dataclass
-import pandas as pd
-import numpy as np
-import Levenshtein
 import string
+import Levenshtein
+
+
+ERR_ADDITION = "addition"
+ERR_SUBTRACTION = "deletion"
+ERR_REPLACEMENT = "substitution"
 
 
 @dataclass
@@ -13,19 +16,6 @@ class AutoCompleteData:
     score: int
 
 
-def calculate_score(base_score, position):
-    if position == 0:
-        return base_score * 2
-    elif position == 1:
-        return base_score * 2 - 1
-    elif position == 2:
-        return base_score * 2 - 2
-    elif position == 3:
-        return base_score * 2 - 3
-    else:
-        return base_score * 2 - 4
-
-
 def preprocess_sentence(sentence):
     # Remove punctuation and convert to lowercase
     translator = str.maketrans("", "", string.punctuation)
@@ -33,45 +23,105 @@ def preprocess_sentence(sentence):
     return sentence
 
 
-def calculate_auto_complete_data(user_sentence, sentences_df):
+def increment_score(score, word):
+    return score + len(word) * 2
+
+
+def calculate_penalty(position, penalty_type):
+    if penalty_type == ERR_REPLACEMENT:
+        if position == 0:
+            return 5
+        elif position == 1:
+            return 4
+        elif position == 2:
+            return 3
+        elif position == 3:
+            return 2
+        else:
+            return 1
+    elif penalty_type == ERR_ADDITION or penalty_type == ERR_SUBTRACTION:
+        if position == 0:
+            return 10
+        elif position == 1:
+            return 8
+        elif position == 2:
+            return 6
+        elif position == 3:
+            return 4
+        else:
+            return 2
+    else:
+        return 0
+
+
+def penalty_score(sentence, sentence_word, user_word, score, penalty_type):
+    if sentence_word not in sentence:
+        return score
+
+    position = sentence.index(sentence_word)
+
+    if user_word == sentence_word:
+        return score
+
+    penalty = calculate_penalty(position, penalty_type)
+    return score - penalty
+
+
+def calculate_change_type(user_word, sentence_word):
+    levenshtein_distance = Levenshtein.distance(user_word, sentence_word)
+    if levenshtein_distance == 1:
+        if len(user_word) == len(sentence_word):
+            return ERR_REPLACEMENT
+        elif len(user_word) < len(sentence_word):
+            return ERR_SUBTRACTION
+        else:
+            return ERR_ADDITION
+    return None
+
+
+def update_results_list(results_list, new_data, min_top_score):
+    if len(results_list) < 5:
+        results_list.append(new_data)
+        if new_data.score < min_top_score:
+            min_top_score = new_data.score
+    elif new_data.score > min_top_score:
+        min_score_index = min(enumerate(results_list), key=lambda x: x[1].score)[0]
+        results_list[min_score_index] = new_data
+        min_top_score = min(results_list, key=lambda x: x.score).score
+    return results_list, min_top_score
+
+
+def calculate_scores(user_sentence, sentences_df):
     autocomplete_results = []
 
     user_sentence = preprocess_sentence(user_sentence)
-    words = user_sentence.split()
+    user_words = user_sentence.split()
 
     for index, row in sentences_df.iterrows():
+        position = 0
+        score = 0
+        one_change_found = False
         processed_sentence = preprocess_sentence(row['sentence'])
-        for word in words:
-            if word in processed_sentence:
-                base_score = len(word) * 2
-
-                offset = processed_sentence.index(word)
-                score = calculate_score(base_score, offset)
-
-                autocomplete_results.append(
-                    AutoCompleteData(word, row['sentence'], offset, score)
-                )
-
-    for index, row in sentences_df.iterrows():
-        processed_sentence = preprocess_sentence(row['sentence'])
-        for word in words:
-            distance = Levenshtein.distance(word, processed_sentence)
-            if distance == 1:
-                offset = processed_sentence.index(word)
-                if offset == 0:
-                    score = calculate_score(10, offset)
-                elif offset == 1:
-                    score = calculate_score(8, offset)
-                elif offset == 2:
-                    score = calculate_score(6, offset)
-                elif offset == 3:
-                    score = calculate_score(4, offset)
-                else:
-                    score = calculate_score(2, offset)
-
-                autocomplete_results.append(
-                    AutoCompleteData(word, row['sentence'], offset, score)
-                )
+        processed_sentence = processed_sentence.split()
+        for word in user_words:
+            if word in processed_sentence[position:]:
+                score = increment_score(score, word)
+                position = processed_sentence.index(word)
+            elif not one_change_found:
+                for i, sentence_word in enumerate(processed_sentence[position:]):
+                    change_type = calculate_change_type(word, sentence_word)
+                    if change_type:
+                        score = penalty_score(processed_sentence, sentence_word, word, score, change_type)
+                        one_change_found = True
+                        position = processed_sentence.index(sentence_word)
+                        break
+                    else:
+                        score = float('-inf')
+            else:
+                score = float('-inf')
+                continue
+        score = score + (2 * len(processed_sentence) - 1)  # add the score of the spaces in the sentence
+        autocomplete_results.append(AutoCompleteData(user_sentence, row['sentence'], row['offset'], score))
 
     autocomplete_results.sort(key=lambda x: x.score, reverse=True)
     top_results = autocomplete_results[:5]
