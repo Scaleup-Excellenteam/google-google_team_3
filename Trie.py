@@ -5,7 +5,7 @@ class TrieNode:
         # keys are characters, values are nodes
         self.children = {}
         # keys are sentence id, values are offsets
-        self.sentences_id = []
+        self.sentences_id = {}
 
 
 class Trie:
