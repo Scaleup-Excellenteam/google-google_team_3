@@ -2,6 +2,7 @@ import pandas as pd
 import os
 from Trie import Trie
 import logging
+from calculate_score import calculate_scores, AutoCompleteData
 
 DATA_DIR = "/Archive2"
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -43,7 +44,7 @@ def initialize_data():
         for file in files:
             if file.endswith('.txt'):
                 print(f'reading file number {counter}')
-                with open(os.path.join(subdir, file)) as txt_file:
+                with open(os.path.join(subdir, file), encoding='utf-8') as txt_file:
                     content = txt_file.read()
                     lines = content.split('\n')
                     for line in lines:
@@ -96,7 +97,14 @@ words_trie = Trie()
 def main():
     initialize_data()
     while True:
-        print(run())
+        try:
+            user_input, filtered_df = run()
+            top_results = calculate_scores(user_input, filtered_df)
+
+            for idx, result in enumerate(top_results, start=1):
+                print(f"Top {idx}: Source Text: {result.source_text}, Score: {result.score}")
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
 
 if __name__ == "__main__":
