@@ -102,7 +102,7 @@ def main():
             top_results = calculate_scores(user_input, filtered_df)
 
             for idx, result in enumerate(top_results, start=1):
-                print(f"Top {idx}: Source Text: {result.source_text}, Score: {result.score}")
+                print(f"Top {idx}: Source Text: {result.source_text}, Offset: {result.offset}, Score: {result.score}")
         except Exception as e:
             print(f"An error occurred: {e}")
 

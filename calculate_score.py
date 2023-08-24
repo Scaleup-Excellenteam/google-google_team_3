@@ -101,13 +101,15 @@ def calculate_scores(user_sentence, sentences_df):
         position = 0
         score = 0
         one_change_found = False
-        #  offset = 0
+        offset = 0
         processed_sentence = preprocess_sentence(row['sentence'])
         processed_sentence = processed_sentence.split()
         for word in user_words:
             if word in processed_sentence[position:]:
                 score = increment_score(score, word)
                 position = processed_sentence.index(word)
+                if user_words.index(word) == 0:
+                    offset = position+1
             elif not one_change_found:
                 for i, sentence_word in enumerate(processed_sentence[position:]):
                     change_type = calculate_change_type(word, sentence_word)
@@ -122,7 +124,7 @@ def calculate_scores(user_sentence, sentences_df):
                 score = float('-inf')
                 continue
         score = score + (2 * len(processed_sentence) - 1)  # add the score of the spaces in the sentence
-        autocomplete_results.append(AutoCompleteData(user_sentence, row['sentence'], 0, score))
+        autocomplete_results.append(AutoCompleteData(user_sentence, row['sentence'], offset, score))
 
     autocomplete_results.sort(key=lambda x: x.score, reverse=True)
     top_results = autocomplete_results[:5]
