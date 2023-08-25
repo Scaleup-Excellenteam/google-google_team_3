@@ -12,6 +12,7 @@ ERR_REPLACEMENT = "substitution"
 class AutoCompleteData:
     completed_sentence: str
     source_text: str
+    file_path: str
     offset: int
     score: int
 
@@ -124,7 +125,7 @@ def calculate_scores(user_sentence, sentences_df):
                 score = float('-inf')
                 continue
         score = score + (2 * len(processed_sentence) - 1)  # add the score of the spaces in the sentence
-        autocomplete_results.append(AutoCompleteData(user_sentence, row['sentence'], offset, score))
+        autocomplete_results.append(AutoCompleteData(user_sentence, row['sentence'], row['file_path'], offset, score))
 
     autocomplete_results.sort(key=lambda x: x.score, reverse=True)
     top_results = autocomplete_results[:5]

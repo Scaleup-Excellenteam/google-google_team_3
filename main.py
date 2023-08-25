@@ -6,7 +6,7 @@ import logging
 from calculate_score import calculate_scores, preprocess_sentence
 
 # Define data directories and paths
-DATA_DIR = "/Archive1"
+DATA_DIR = "/Archive"
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 ENGLISH_LETTERS_NUM = 26
 logs_dir = os.path.join(CURR_DIR, "logs")
@@ -110,8 +110,7 @@ def get_matches():
     Get the sentences that the word is in.
     """
     user_input = input("The system is ready, enter your text: \n").lower()
-
-    # Start timer for search time
+    # Record the start time
     start_time = time.time()
 
     match_sentences = {}
@@ -139,31 +138,36 @@ def get_matches():
         # Fetch the actual sentences from the DataFrame
         filtered_df = sentences_df[sentences_df.index.isin(matching_sentence_ids)]
         filtered_df.columns = ['sentence', 'file_path']
-        # Stop timer for search
-        end_time = time.time()
-        runtime = end_time - start_time
-        print(f"Program runtime: {runtime:.6f} seconds")
 
-        return user_input, filtered_df
+        return start_time, user_input, filtered_df
     else:
         matching_sentence_ids = filter_sentences_input_smaller_than_2(user_input)
         filtered_df = sentences_df[sentences_df.index.isin(matching_sentence_ids)]
         filtered_df.columns = ['sentence', 'file_path']
-        return user_input, filtered_df
+        return start_time, user_input, filtered_df
+
+
+def run():
+    start_time, user_input, filtered_df = get_matches()
+    top_results = calculate_scores(user_input, filtered_df)
+
+    for idx, result in enumerate(top_results, start=1):
+        print(f"Top {idx}: Source Text: '{result.source_text}' file name: {result.file_path}, Score: {result.score}")
+
+    # Record the ending time
+    end_time = time.time()
+    # Calculate the runtime
+    runtime = end_time - start_time
+    print(f"Program runtime: {runtime:.6f} seconds")
 
 
 # Main Function
 def main():
     # Load data files to datastructures
     initialize_data()
-    print(sentences_df)
 
     while True:
-        user_input, filtered_df = get_matches()
-        top_results = calculate_scores(user_input, filtered_df)
-
-        for idx, result in enumerate(top_results, start=1):
-            print(f"Top Matches:\n Top {idx}: Source Text: {result.source_text}, Score: {result.score}")
+        run()
 
 
 # Entry point

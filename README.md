@@ -13,6 +13,14 @@ of the user inputs based on lage dataset files provided in Archive directory (mi
 - Interactive command-line interface for user input.
 - Logging system to keep track of system activity.
 
+## Algorithm
+
+The program using 2 DataStructures:
+- DataFrame of all the sentences in the dataset.
+- Trie for all the words in the dataset without duplications, each node of a word holds a list of all the indices of the sentences that this word appears in. 
+
+This structure makes the search time for auto complete more efficient.  
+
 ## Installation
 
 1. Clone this repository to your local machine.
@@ -21,7 +29,7 @@ of the user inputs based on lage dataset files provided in Archive directory (mi
    ```
 2. Install the required dependencies.
    ```shell
-   pip install pandas
+   pip install pandas Levenshtein
    ```
 3. Run the project.
    ```shell
